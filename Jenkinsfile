@@ -29,37 +29,60 @@ pipeline {
                 """
             }
         }
-        stage ('nexus artifact upload') {
+        stage('Docker build') {
             steps {
-                script {
-                    nexusArtifactUploader(
-                        nexusVersion: 'nexus3',
-                        protocol: 'http',
-                        nexusUrl: "${nexusUrl}",
-                        groupId: 'com.expense',
-                        version: "${appVersion}",
-                        repository: "frontend",
-                        credentialsId: 'nexus_auth',
-                        artifacts: [
-                            [artifactId: "frontend",
-                            classifier: '', 
-                            file: "frontend-" + "${appVersion}" + '.zip' , 
-                            type: 'zip']
-                        ]
-                    )
-                }
+                sh """
+                    aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${account_id}.dkr.ecr.${region}.amazonaws.com
+
+                    docker build -t ${account_id}.dkr.ecr.${region}.amazonaws.com/expense-frontend:${appVersion} .
+
+                    docker push ${account_id}.dkr.ecr.${region}.amazonaws.com/expense-frontend:${appVersion}
+
+                """
             }
         }
-        stage('Deploy') {
+        stage("Deploy") {
             steps {
-                script{
-                    def params = [
-                        string(name: 'appVersion', value: "${appVersion}")
-                    ]
-                    build job: 'frontend-deploy', parameters: params, wait: false
-                }
+                sh """
+                    aws eks update-kubeconfig --region us-east-1 --name expense-dev
+                    cd helm
+                    sed -i 's/IMAGE_VERSION/${appVersion}/g' values.yaml
+                    helm install frontend .
+
+                """
             }
-        }      
+        }
+        /* stage ('nexus artifact upload') { */
+        /*     steps { */
+        /*         script { */
+        /*             nexusArtifactUploader( */
+        /*                 nexusVersion: 'nexus3', */
+        /*                 protocol: 'http', */
+        /*                 nexusUrl: "${nexusUrl}", */
+        /*                 groupId: 'com.expense', */
+        /*                 version: "${appVersion}", */
+        /*                 repository: "frontend", */
+        /*                 credentialsId: 'nexus_auth', */
+        /*                 artifacts: [ */
+        /*                     [artifactId: "frontend", */
+        /*                     classifier: '',  */
+        /*                     file: "frontend-" + "${appVersion}" + '.zip' ,  */
+        /*                     type: 'zip'] */
+        /*                 ] */
+        /*             ) */
+        /*         } */
+        /*     } */
+        /* } */
+        /* stage('Deploy') { */
+        /*     steps { */
+        /*         script{ */
+        /*             def params = [ */
+        /*                 string(name: 'appVersion', value: "${appVersion}") */
+        /*             ] */
+        /*             build job: 'frontend-deploy', parameters: params, wait: f */alse
+        /*         } */
+        /*     } */
+        /* }       */
     }
     post {
         always {
