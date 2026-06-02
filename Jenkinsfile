@@ -10,6 +10,8 @@ pipeline {
     environment{
         appVersion = ''
         nexusUrl = "nexus.daws.info:8081"
+        region   =  "us-east-1"
+        account_id = "222634371492"
     }
     stages {
         stage ("read the version"){
