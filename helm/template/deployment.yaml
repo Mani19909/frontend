@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: manikantarouthu/frontendend:{{ .Values.deployment.imageVersion }}   # ✅ fixed image
+        image: 222634371492.dkr.ecr.us-east-1.amazonaws.com/expense-frontend:{{ .Values.deployment.imageVersion }}   # ✅ fixed image
         ports:
         - containerPort: 8080
         volumeMounts:
